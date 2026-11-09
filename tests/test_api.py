@@ -25,6 +25,15 @@ def secured_client(monkeypatch):
         yield c
 
 
+def test_root_landing_page(client):
+    root = client.get("/").json()
+    assert root["service"] == "loan-api"
+    assert root["status"] == "ok"
+    assert root["docs"] == "/docs"
+    assert root["health"] == "/health"
+    assert root["git_sha"]
+
+
 def test_health_reports_model_version_and_sha(client):
     health = client.get("/health").json()
     assert health["status"] == "ok"

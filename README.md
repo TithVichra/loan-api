@@ -10,6 +10,7 @@ FastAPI service that stores loan applications and scores their default risk with
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
+| `GET` | `/` | public | Service landing page with links and deployed commit |
 | `GET` | `/health` | public | Status, model version, deployed commit |
 | `POST` | `/api/v1/predictions` | `X-API-Key` | Score one applicant |
 | `POST` | `/api/v1/applications` | `X-API-Key` | Create and score an application |

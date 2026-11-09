@@ -92,6 +92,18 @@ def score(features: LoanFeatures) -> Prediction:
     return Prediction(default_probability=round(probability, 3), risk_band=band, model_version=ml["version"])
 
 
+@app.get("/")
+def root():
+    return {
+        "service": "loan-api",
+        "status": "ok",
+        "version": app.version,
+        "git_sha": ml.get("sha", "unknown"),
+        "docs": "/docs",
+        "health": "/health",
+    }
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "model_version": ml.get("version"), "git_sha": ml.get("sha", "unknown")}
