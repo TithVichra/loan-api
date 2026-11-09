@@ -2,11 +2,12 @@
 from contextlib import asynccontextmanager
 import json
 import os
+import secrets
 from pathlib import Path
 
 import joblib
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 
 from schemas import Application, ApplicationCreate, LoanFeatures, Prediction
 
@@ -18,6 +19,7 @@ MODEL_ARTIFACT = os.getenv("MODEL_ARTIFACT", "champion_model.joblib")
 MODEL_NAME = os.getenv("MLFLOW_MODEL_NAME", "loan-default")
 MODEL_ALIAS = os.getenv("MLFLOW_MODEL_ALIAS", "champion")
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "")
+API_KEY = os.getenv("API_KEY")
 VERSION_FILE = Path(os.getenv("VERSION_FILE", "version.json"))
 FEATURES = ["amount_usd", "term_months", "monthly_income_usd", "previous_loans", "late_payments"]
 
@@ -63,6 +65,20 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Loan Application Service", version="1.1.0", lifespan=lifespan)
 
 
+def require_api_key(x_api_key: str | None = Header(default=None, alias="X-API-Key")) -> None:
+    """Three checks: auth configured, key present, key valid."""
+    if not API_KEY:
+        return
+    if x_api_key is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing API key",
+            headers={"WWW-Authenticate": "ApiKey"},
+        )
+    if not secrets.compare_digest(x_api_key, API_KEY):
+        raise HTTPException(status_code=403, detail="Invalid API key")
+
+
 def _default_probability(model, features: LoanFeatures) -> float:
     X = pd.DataFrame([features.model_dump()])[ml["features"]]
     if hasattr(model, "predict_proba"):
@@ -81,12 +97,13 @@ def health():
     return {"status": "ok", "model_version": ml.get("version"), "git_sha": ml.get("sha", "unknown")}
 
 
-@app.post("/api/v1/predictions", response_model=Prediction)
+@app.post("/api/v1/predictions", response_model=Prediction, dependencies=[Depends(require_api_key)])
 def predict(features: LoanFeatures):
     return score(features)
 
 
-@app.post("/api/v1/applications", response_model=Application, status_code=201)
+@app.post("/api/v1/applications", response_model=Application, status_code=201,
+          dependencies=[Depends(require_api_key)])
 def create_application(body: ApplicationCreate):
     new = Application(id=7781 + len(APPLICATIONS), status="pending",
                       prediction=score(body), **body.model_dump())
@@ -94,12 +111,13 @@ def create_application(body: ApplicationCreate):
     return new
 
 
-@app.get("/api/v1/applications", response_model=list[Application])
+@app.get("/api/v1/applications", response_model=list[Application], dependencies=[Depends(require_api_key)])
 def list_applications():
     return list(APPLICATIONS.values())
 
 
-@app.get("/api/v1/applications/{application_id}", response_model=Application)
+@app.get("/api/v1/applications/{application_id}", response_model=Application,
+         dependencies=[Depends(require_api_key)])
 def get_application(application_id: int):
     if application_id not in APPLICATIONS:
         raise HTTPException(status_code=404, detail=f"Application {application_id} not found")
