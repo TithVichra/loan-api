@@ -88,7 +88,7 @@ def _default_probability(model, features: LoanFeatures) -> float:
 
 def score(features: LoanFeatures) -> Prediction:
     probability = _default_probability(ml["model"], features)
-    band = "low" if probability < 0.2 else "medium" if probability < 0.5 else "high"
+    band = "high" if probability < 0.2 else "medium" if probability < 0.5 else "low"
     return Prediction(default_probability=round(probability, 3), risk_band=band, model_version=ml["version"])
 
 
