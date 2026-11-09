@@ -19,6 +19,13 @@ GOOD = {
 }
 
 
+def _decode(raw: bytes) -> dict:
+    try:
+        return json.loads(raw or b"{}")
+    except ValueError:
+        return {"raw": raw.decode(errors="replace")[:200]}
+
+
 def request(method: str, path: str, body: dict | None = None, key: str | None = None):
     data = json.dumps(body).encode() if body is not None else None
     headers = {"Content-Type": "application/json"}
@@ -27,9 +34,11 @@ def request(method: str, path: str, body: dict | None = None, key: str | None = 
     req = urllib.request.Request(f"{BASE_URL}{path}", data=data, headers=headers, method=method)
     try:
         with urllib.request.urlopen(req, timeout=30) as response:
-            return response.status, json.loads(response.read() or b"{}")
+            return response.status, _decode(response.read())
     except urllib.error.HTTPError as error:
-        return error.code, json.loads(error.read() or b"{}")
+        return error.code, _decode(error.read())
+    except (urllib.error.URLError, TimeoutError, OSError) as error:
+        return 0, {"error": str(error)}
 
 
 def now() -> str:
