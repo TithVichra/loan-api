@@ -37,7 +37,8 @@ jobs:
       - name: Install deploy CLI
         run: pip install fastapi-cloud-cli==0.27.1
       - name: Stamp the commit being deployed
-        run: python -c "import json,os; json.dump({'sha': os.environ['GITHUB_SHA']}, open('version.json','w'))"
+        run: |
+          python -c "import json,os; json.dump({'sha': os.environ['GITHUB_SHA']}, open('version.json','w'))"
       - name: Deploy to FastAPI Cloud
         env:
           FASTAPI_CLOUD_TOKEN: ${{ secrets.FASTAPI_CLOUD_TOKEN }}
