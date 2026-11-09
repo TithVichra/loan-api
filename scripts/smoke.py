@@ -28,7 +28,11 @@ def _decode(raw: bytes) -> dict:
 
 def request(method: str, path: str, body: dict | None = None, key: str | None = None):
     data = json.dumps(body).encode() if body is not None else None
-    headers = {"Content-Type": "application/json"}
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "loan-api-smoke/1.0",
+    }
     if key is not None:
         headers["X-API-Key"] = key
     req = urllib.request.Request(f"{BASE_URL}{path}", data=data, headers=headers, method=method)
