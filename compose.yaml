@@ -6,7 +6,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      MODEL_PATH: /app/model.joblib
+      MODEL_SOURCE: artifact
+      API_KEY: ${API_KEY:?Set API_KEY in the environment before running Compose}
     depends_on:
       db:
         condition: service_healthy

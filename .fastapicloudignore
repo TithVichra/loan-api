@@ -1,0 +1,9 @@
+mlruns/
+mlartifacts/
+mlflow.db
+mlflow.db-shm
+mlflow.db-wal
+artifacts/
+tests/
+.env
+.env.*

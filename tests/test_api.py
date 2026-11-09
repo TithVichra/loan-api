@@ -1,4 +1,4 @@
-"""Run with: python train.py && pytest -v"""
+"""Run with: pytest -v (the champion artifact is committed as champion_model.joblib)."""
 import pytest
 from fastapi.testclient import TestClient
 
@@ -14,8 +14,11 @@ def client():
         yield c
 
 
-def test_health_reports_model_version(client):
-    assert client.get("/health").json() == {"status": "ok", "model_version": "1.0.0"}
+def test_health_reports_model_version_and_sha(client):
+    health = client.get("/health").json()
+    assert health["status"] == "ok"
+    assert health["model_version"] == "1"
+    assert health["git_sha"]
 
 
 def test_prediction_is_a_probability(client):
