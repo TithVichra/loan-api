@@ -62,16 +62,28 @@ def main() -> int:
         print(f"FAIL: live SHA did not become {EXPECTED_SHA}", flush=True)
         return 1
 
-    status, prediction = request("POST", "/api/v1/predictions", GOOD, key=API_KEY)
-    print(f"{now()} POST /api/v1/predictions -> {status} {prediction}", flush=True)
-    if status != 200:
-        print("FAIL: prediction request was not accepted", flush=True)
-        return 1
-    if prediction.get("risk_band") != "low":
-        print(f"FAIL: expected risk_band=low, got {prediction.get('risk_band')}", flush=True)
-        return 1
-    if prediction.get("model_version") != health.get("model_version"):
-        print("FAIL: model version differs between /health and prediction", flush=True)
+    stable = 0
+    deadline = time.monotonic() + 120
+    prediction = {}
+    while time.monotonic() < deadline:
+        status_h, health_now = request("GET", "/health")
+        status_p, prediction = request("POST", "/api/v1/predictions", GOOD, key=API_KEY)
+        print(f"{now()} GET /health -> {status_h} {health_now}", flush=True)
+        print(f"{now()} POST /api/v1/predictions -> {status_p} {prediction}", flush=True)
+        consistent = (
+            status_h == 200
+            and health_now.get("git_sha") == EXPECTED_SHA
+            and status_p == 200
+            and prediction.get("risk_band") == "low"
+            and prediction.get("model_version") == health_now.get("model_version")
+        )
+        stable = stable + 1 if consistent else 0
+        if stable >= 2:
+            health = health_now
+            break
+        time.sleep(3)
+    else:
+        print("FAIL: the new version never served two consistent low-risk predictions", flush=True)
         return 1
 
     print(json.dumps({"verified_sha": EXPECTED_SHA, "health": health, "prediction": prediction}), flush=True)
