@@ -38,6 +38,11 @@ def test_prediction_is_a_probability(client):
     assert body["risk_band"] in {"low", "medium", "high"}
 
 
+def test_known_low_risk_applicant_is_low(client):
+    body = client.post("/api/v1/predictions", json=GOOD).json()
+    assert body["risk_band"] == "low"
+
+
 def test_amount_above_limit_is_rejected(client):
     assert client.post("/api/v1/predictions", json={**GOOD, "amount_usd": 9000}).status_code == 422
 
