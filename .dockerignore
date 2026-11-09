@@ -1,0 +1,13 @@
+.venv
+env
+__pycache__
+*.py[cod]
+.pytest_cache
+.git
+.gitignore
+.env
+.env.*
+models
+tests
+CHECKLIST.md
+*.joblib
