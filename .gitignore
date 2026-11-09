@@ -4,3 +4,11 @@ __pycache__/
 .pytest_cache/
 model.joblib
 models/
+mlflow.db
+mlflow.db-shm
+mlflow.db-wal
+mlartifacts/
+mlruns/
+.fastapicloud/
+.env
+.env.*

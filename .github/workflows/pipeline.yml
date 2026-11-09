@@ -1,0 +1,52 @@
+name: pipeline
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install test dependencies
+        run: pip install -r requirements.txt pytest
+      - name: Run regression tests
+        run: pytest -q
+
+  deploy:
+    name: deploy
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deploy CLI
+        run: pip install fastapi-cloud-cli==0.27.1
+      - name: Stamp the commit being deployed
+        run: |
+          python -c "import json,os; json.dump({'sha': os.environ['GITHUB_SHA']}, open('version.json','w'))"
+      - name: Deploy to FastAPI Cloud
+        env:
+          FASTAPI_CLOUD_TOKEN: ${{ secrets.FASTAPI_CLOUD_TOKEN }}
+          FASTAPI_CLOUD_APP_ID: ${{ secrets.FASTAPI_CLOUD_APP_ID }}
+        run: python -m fastapi_cloud_cli cloud deploy --app-id "$FASTAPI_CLOUD_APP_ID"
+      - name: Verify the live deployment
+        env:
+          BASE_URL: ${{ vars.LIVE_BASE_URL }}
+          EXPECTED_SHA: ${{ github.sha }}
+          LOAN_API_KEY: ${{ secrets.LOAN_API_KEY }}
+        run: python scripts/smoke.py
